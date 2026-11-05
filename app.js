@@ -142,7 +142,8 @@ function prepareCloudPayload() {
         kategori: b.kategori || 'Berita',
         tanggal: b.tanggal || '',
         fotos: fotosStr,
-        ringkasan: (b.ringkasan || '').replace(/humas\s+smpn\s*32/gi, 'Humas Sekolah').replace(/smpn\s*32/gi, 'Sekolah')
+        ringkasan: (b.ringkasan || '').replace(/humas\s+smpn\s*32/gi, 'Humas Sekolah').replace(/smpn\s*32/gi, 'Sekolah'),
+        konten: (b.konten || b.ringkasan || '').replace(/humas\s+smpn\s*32/gi, 'Humas Sekolah').replace(/smpn\s*32/gi, 'Sekolah')
       };
     });
   } else {
@@ -240,29 +241,43 @@ function parseGVizResponse(text) {
   if (start === -1 || end === -1) return null;
   try {
     const data = JSON.parse(text.substring(start, end + 1));
-    if (!data.table || !data.table.cols) return null;
-    const cols = data.table.cols.map(c => (c && (c.label || c.id) ? (c.label || c.id) : '').trim());
-    const rows = [];
-    if (Array.isArray(data.table.rows)) {
-      data.table.rows.forEach(r => {
-        if (!r || !r.c) return;
-        const rowObj = {};
-        let hasData = false;
-        r.c.forEach((cell, idx) => {
-          const header = cols[idx] || `col_${idx}`;
-          let val = '';
-          if (cell && cell.v !== null && cell.v !== undefined) {
-            val = (cell.f !== undefined && cell.f !== null) ? cell.f : cell.v;
-            if (typeof val === 'string') val = val.trim();
-            if (val !== '') hasData = true;
-          }
-          rowObj[header] = val;
-        });
-        if (hasData) rows.push(rowObj);
-      });
+    if (!data.table || !data.table.cols || !Array.isArray(data.table.rows)) return null;
+
+    let colLabels = data.table.cols.map(c => (c && c.label ? c.label.trim() : ''));
+    let dataRows = data.table.rows;
+
+    // Jika semua colLabels kosong, periksa apakah baris pertama (dataRows[0]) berisi nama-nama kolom/header
+    const allLabelsEmpty = colLabels.every(l => !l || l === '');
+    if (allLabelsEmpty && dataRows.length > 0) {
+      const firstRowCells = dataRows[0].c || [];
+      const extractedHeaders = firstRowCells.map(cell => (cell && cell.v !== null && cell.v !== undefined) ? String(cell.v).trim() : '');
+      const hasValidHeader = extractedHeaders.some(h => h.length > 0);
+      if (hasValidHeader) {
+        colLabels = extractedHeaders;
+        dataRows = dataRows.slice(1);
+      }
     }
+
+    const rows = [];
+    dataRows.forEach(r => {
+      if (!r || !r.c) return;
+      const rowObj = {};
+      let hasData = false;
+      r.c.forEach((cell, idx) => {
+        const header = colLabels[idx] || `col_${idx}`;
+        let val = '';
+        if (cell && cell.v !== null && cell.v !== undefined) {
+          val = (cell.f !== undefined && cell.f !== null) ? cell.f : cell.v;
+          if (typeof val === 'string') val = val.trim();
+          if (val !== '') hasData = true;
+        }
+        rowObj[header] = val;
+      });
+      if (hasData) rows.push(rowObj);
+    });
     return rows;
   } catch(e) {
+    console.warn('parseGVizResponse error:', e);
     return null;
   }
 }
@@ -308,11 +323,21 @@ function syncFromGoogleSheetsCloud(showToast = true, callback = null) {
   isFetchingFromCloud = true;
   updateCloudBadge('syncing', 'Memuat Spreadsheet...');
 
-  const fetchPromise = (endpoint && endpoint.trim() !== '' && !endpoint.includes(OLD_APPS_SCRIPT_URL_PATTERN) && !endpoint.includes(LEGACY_APPS_SCRIPT_URL))
-    ? fetch(sId ? `${endpoint}?spreadsheetId=${encodeURIComponent(sId)}` : endpoint)
-        .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
-        .catch(() => fetchAllSheetsDirect(sId))
-    : fetchAllSheetsDirect(sId);
+  // ⚡ PRIORITASKAN GVIZ PARALLEL DIRECT: Kecepatan super tinggi (<1 detik) langsung dari Google Cloud Edge CDN
+  // Mengambil data seluruh sheet secara paralel tanpa delay 302 redirect Apps Script
+  const fetchPromise = sId
+    ? fetchAllSheetsDirect(sId).then(cloudDb => {
+        if (cloudDb && Object.keys(cloudDb).length > 0) {
+          return cloudDb;
+        }
+        if (endpoint && endpoint.trim() !== '' && !endpoint.includes(OLD_APPS_SCRIPT_URL_PATTERN) && !endpoint.includes(LEGACY_APPS_SCRIPT_URL)) {
+          return fetch(`${endpoint}?spreadsheetId=${encodeURIComponent(sId)}`).then(r => r.json());
+        }
+        return {};
+      })
+    : (endpoint && endpoint.trim() !== ''
+        ? fetch(endpoint).then(r => r.json())
+        : Promise.resolve({}));
 
   fetchPromise
     .then(cloudDb => {
@@ -393,8 +418,19 @@ function syncFromGoogleSheetsCloud(showToast = true, callback = null) {
             } else if (rawFoto) {
               fotosArr = [rawFoto];
             }
+            // Konversi seluruh URL ke Direct Image CDN Google
+            fotosArr = fotosArr.map(f => getDirectImageSrc(f)).filter(Boolean);
+
+            // Jika foto di cloud kosong, pertahankan foto lokal jika ada untuk judul berita yang sama
+            if (fotosArr.length === 0 && db.berita && Array.isArray(db.berita)) {
+              const existingLocal = db.berita.find(l => l && l.judul && l.judul.trim().toLowerCase() === jdl.trim().toLowerCase());
+              if (existingLocal && existingLocal.fotos && existingLocal.fotos.length > 0) {
+                fotosArr = existingLocal.fotos.map(f => getDirectImageSrc(f));
+              }
+            }
+
             if (fotosArr.length === 0) {
-              fotosArr = ['https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=600&q=80'];
+              fotosArr = ['logo_annisa.png'];
             }
 
             let rawTgl = b.tanggal || b.Tanggal || '';
@@ -725,10 +761,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function getDirectImageSrc(url) {
   if (!url) return '';
-  if (typeof url === 'string' && url.includes('drive.google.com')) {
-    const match = url.match(/\/file\/d\/([^\/]+)/) || url.match(/id=([^&]+)/);
-    if (match && match[1]) {
-      return 'https://lh3.googleusercontent.com/d/' + match[1];
+  if (typeof url !== 'string') return '';
+  url = url.trim();
+  if (url.startsWith('data:image')) return url;
+
+  // Jika URL berupa Google Drive (berbagai macam format), konversi ke Direct Image CDN Google
+  if (url.includes('drive.google.com') || url.includes('googleusercontent.com')) {
+    const fileIdMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+                        url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
+                        url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (fileIdMatch && fileIdMatch[1]) {
+      return 'https://lh3.googleusercontent.com/d/' + fileIdMatch[1];
     }
   }
   return url;
@@ -910,7 +953,8 @@ function uploadToDriveIfAvailable(file, dataUrl, customFileName, callback, fileM
     }
 
     if (data && data.status === 'success') {
-      const driveUrl = data.driveLink || data.fileUrl;
+      const directPhotoUrl = data.directUrl || (data.fileId ? 'https://lh3.googleusercontent.com/d/' + data.fileId : null);
+      const driveUrl = directPhotoUrl || data.driveLink || data.fileUrl;
       if (driveUrl) {
         callback(driveUrl);
         showSystemToast('✅ Berhasil tersimpan di Google Drive!', 'success', 4000);
@@ -1535,7 +1579,7 @@ function renderBeritaGrid() {
             
             <div class="berita-carousel-track" id="beritaTrack_${bIdx}">
               ${photoArr.map(pUrl => `
-                <img src="${esc(pUrl)}" class="berita-carousel-slide" alt="${esc(item.judul)}" loading="lazy" decoding="async">
+                <img src="${esc(getDirectImageSrc(pUrl))}" class="berita-carousel-slide" alt="${esc(item.judul)}" loading="lazy" decoding="async" onerror="this.src='logo_annisa.png'">
               `).join('')}
             </div>
 
@@ -1696,7 +1740,7 @@ function openDetailBerita(idx) {
         <!-- Foto Utama (Featured Photo Slide) -->
         <div class="portal-article-media">
           <div class="portal-featured-card">
-            <img id="portalDetailMainImg" src="${esc(currentDetailBeritaPhotos[0])}" class="portal-featured-img" alt="${esc(displayTitle)}" onerror="this.src='https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80'">
+            <img id="portalDetailMainImg" src="${esc(getDirectImageSrc(currentDetailBeritaPhotos[0]))}" class="portal-featured-img" alt="${esc(displayTitle)}" onerror="this.src='logo_annisa.png'">
             ${hasMultiplePhotos ? `
               <button class="portal-slide-nav prev" onclick="movePortalDetailSlide(-1)" title="Foto Sebelumnya">
                 <i class="fa-solid fa-chevron-left"></i>
@@ -1788,7 +1832,7 @@ function openDetailBerita(idx) {
               return `
                 <div class="portal-recent-item ${isCurrent ? 'current-active' : ''}" onclick="openDetailBerita(${oIdx})" title="Buka artikel: ${esc(otherTitle)}">
                   <div class="portal-recent-thumb-frame">
-                    <img src="${esc(thumbSrc)}" alt="${esc(otherTitle)}" onerror="this.src='https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=600&q=80'">
+                    <img src="${esc(getDirectImageSrc(thumbSrc))}" alt="${esc(otherTitle)}" onerror="this.src='logo_annisa.png'">
                     ${isCurrent ? '<span class="current-reading-chip">SEDANG DIBACA</span>' : ''}
                   </div>
                   <div class="portal-recent-info">
@@ -1818,7 +1862,7 @@ function setPortalDetailSlide(slideIdx) {
   const mainImg = document.getElementById('portalDetailMainImg');
   if (mainImg) {
     mainImg.style.opacity = '0.4';
-    mainImg.src = currentDetailBeritaPhotos[currentDetailBeritaSlide];
+    mainImg.src = getDirectImageSrc(currentDetailBeritaPhotos[currentDetailBeritaSlide]);
     setTimeout(() => { mainImg.style.opacity = '1'; }, 80);
   }
 
@@ -1929,9 +1973,19 @@ function handleBeritaPhotosUpload(event) {
   const files = Array.from(event.target.files);
   if (!files || files.length === 0) return;
 
+  const submitBtn = document.getElementById('btnSubmitBerita');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengunggah Foto ke Drive...';
+  }
+
+  let pendingUploads = files.length;
+
   files.forEach(file => {
     let localUrlAssigned = null;
     processLocalFileToDataUrlAndCloud(file, (finalUrl) => {
+      const isCloudUrl = finalUrl && (finalUrl.includes('googleusercontent.com') || finalUrl.includes('drive.google.com'));
+
       if (!localUrlAssigned) {
         localUrlAssigned = finalUrl;
         tempUploadedBeritaPhotos.push(finalUrl);
@@ -1945,8 +1999,24 @@ function handleBeritaPhotosUpload(event) {
         }
       }
       updateBeritaPhotoPreviewList();
+
+      if (isCloudUrl) {
+        pendingUploads--;
+        if (pendingUploads <= 0 && submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan Berita';
+          showSystemToast('✅ Seluruh foto berita berhasil diunggah ke Google Drive & siap disimpan!', 'success', 4000);
+        }
+      }
     });
   });
+
+  setTimeout(() => {
+    if (submitBtn && submitBtn.disabled) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Simpan Berita';
+    }
+  }, 12000);
 }
 
 function removeTempUploadedPhoto(idx) {
@@ -2044,7 +2114,7 @@ function openFormModalBerita(idx = -1) {
 
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
         <button type="button" class="btn btn-secondary" onclick="closeModal('formModal')">Batal</button>
-        <button type="submit" class="btn btn-emerald"><i class="fa-solid fa-floppy-disk"></i> Simpan Berita</button>
+        <button type="submit" id="btnSubmitBerita" class="btn btn-emerald"><i class="fa-solid fa-floppy-disk"></i> Simpan Berita</button>
       </div>
     </form>
   `;
@@ -2056,10 +2126,10 @@ function openFormModalBerita(idx = -1) {
 function saveBeritaForm(e, idx) {
   e.preventDefault();
 
-  let finalPhotos = [...tempUploadedBeritaPhotos];
+  let finalPhotos = tempUploadedBeritaPhotos.map(p => getDirectImageSrc(p)).filter(Boolean);
 
   if (finalPhotos.length === 0) {
-    finalPhotos = ["https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=600&q=80"];
+    finalPhotos = ["logo_annisa.png"];
   }
 
   const ringkasanText = document.getElementById('fBeritaRingkasan').value.trim();
