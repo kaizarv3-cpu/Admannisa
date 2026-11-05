@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SDIT ANNISA - Sistem Administrasi & Profil Sekolah</title>
+
+  <!-- Preconnect to CDNs for speed -->
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+
+  <!-- Official School Logo Favicon -->
+  <link rel="icon" type="image/png" href="logo_annisa.png">
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- SheetJS (XLSX) Library for Microsoft Excel Native Support (deferred for faster initial load) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css?v=2.5">
+</head>
+
+<body>
+
+  <!-- SIDEBAR NAVIGATION -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
+        <img src="logo_annisa.png" alt="Logo Resmi SDIT ANNISA" class="brand-logo-img">
+        <div class="brand-info">
+          <h2>SDIT ANNISA</h2>
+          <small>Administrasi & Portal Terpadu</small>
+        </div>
+      </div>
+      <button type="button" class="sidebar-close-mobile-btn" onclick="closeMobileSidebar(event)"
+        title="Tutup Menu Sidebar" aria-label="Tutup Menu">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="nav-section-title">Menu Utama</div>
+    <div class="nav" id="navMenu">
+      <button class="active" onclick="showSection('dashboard', this)" title="Dashboard"><i class="fa-solid fa-chart-pie"></i> <span>Dashboard</span></button>
+      <button onclick="showSection('profil', this)" title="Profil Sekolah"><i class="fa-solid fa-school"></i> <span>Profil Sekolah</span></button>
+
+      <div class="nav-section-title">Kepegawaian & Siswa</div>
+      <button onclick="showSection('guru', this)" title="Data Guru & Tendik"><i class="fa-solid fa-user-tie"></i> <span>Data Guru & Tendik</span></button>
+      <button onclick="showSection('siswa', this)" title="Data Siswa"><i class="fa-solid fa-graduation-cap"></i> <span>Data Siswa</span></button>
+      <button onclick="showSection('masuk', this)" title="Siswa Masuk"><i class="fa-solid fa-user-plus"></i> <span>Siswa Masuk</span></button>
+      <button onclick="showSection('keluar', this)" title="Siswa Keluar"><i class="fa-solid fa-user-minus"></i> <span>Siswa Keluar</span></button>
+      <button onclick="showSection('lulusan', this)" title="Data Lulusan"><i class="fa-solid fa-award"></i> <span>Data Lulusan</span></button>
+      <button onclick="showSection('kelas', this)" title="Data Kelompok Kelas"><i class="fa-solid fa-layer-group"></i> <span>Data Kelas</span></button>
+
+      <div class="nav-section-title">Aset & Sarpras</div>
+      <button onclick="showSection('administrasi', this)" title="Surat & Arsip"><i class="fa-solid fa-file-signature"></i> <span>Surat & Arsip</span></button>
+      <button onclick="showSection('inventaris', this)" title="Inventaris"><i class="fa-solid fa-boxes-stacked"></i> <span>Inventaris</span></button>
+      <button onclick="showSection('ruangan', this)" title="Data Ruangan"><i class="fa-solid fa-door-open"></i> <span>Data Ruangan</span></button>
+
+      <div class="nav-section-title">Layanan & Laporan</div>
+      <button onclick="showSection('uks', this)" title="Layanan UKS"><i class="fa-solid fa-kit-medical"></i> <span>Layanan UKS</span></button>
+      <button onclick="showSection('perpustakaan', this)" title="Perpustakaan"><i class="fa-solid fa-book"></i> <span>Perpustakaan</span></button>
+      <button onclick="showSection('laporan', this)" title="Cetak Laporan"><i class="fa-solid fa-print"></i> <span>Cetak Laporan</span></button>
+
+      <!-- MENU SISTEM -->
+      <div class="nav-section-title">Sistem</div>
+      <button onclick="showSection('pengaturan', this)" title="Pengaturan Sistem"><i class="fa-solid fa-gear"></i> <span>Pengaturan</span></button>
+      <div id="adminSystemNavWrapper">
+        <button onclick="backupData()" title="Backup Data"><i class="fa-solid fa-download"></i> <span>Backup Data</span></button>
+        <button onclick="restoreData()" title="Restore Data"><i class="fa-solid fa-upload"></i> <span>Restore Data</span></button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="main">
+
+    <!-- TOP HEADER BAR (BESERTA TOMBOL ICON SEGITIGA TOGGLE SIDEBAR) -->
+    <header class="top-bar-header">
+      <div class="top-bar-left">
+        <!-- TOMBOL ICON STRIP 3 (FA-BARS) TOGGLE MENU SIDEBAR -->
+        <button type="button" class="sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleSidebarCollapse(event)"
+          title="Sembunyikan / Tampilkan Menu Sidebar" aria-label="Toggle Menu Sidebar">
+          <i class="fa-solid fa-bars" id="sidebarToggleIcon" style="pointer-events: none;"></i>
+        </button>
+
+        <img src="logo_annisa.png" alt="Logo SDIT ANNISA" class="top-bar-logo">
+        <span class="school-tag-badge"><i class="fa-solid fa-shield-halved"></i> SDIT ANNISA</span>
+        <span class="page-subtitle date-text-hide" id="currentDateDisplay">📅 Memuat Tanggal...</span>
+      </div>
+
+      <div class="top-bar-right">
+
+        <!-- TOMBOL STATUS SINKRONISASI CLOUD -->
+        <button type="button" id="cloudSyncStatusToast" class="cloud-sync-badge" onclick="triggerManualSync()"
+          title="Klik untuk sinkronisasi data cloud sekarang">
+          <i class="fa-solid fa-cloud"></i>
+          <span class="sync-text">Cloud Aktif</span>
+          <span class="sync-detail">(Sinkron)</span>
+        </button>
+
+        <!-- TOMBOL ICON ORANG LOGIN ADMIN (HANYA ICON SAJA) -->
+        <button class="btn-admin-icon-only" id="btnAdminIcon" onclick="handleAdminIconClick()"
+          title="Login / Keluar Admin">
+          <i class="fa-solid fa-user"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- SECTION 1: DASHBOARD -->
+    <section id="dashboard" class="page-section">
+
+      <!-- HERO BANNER SELAMAT DATANG DI SDIT ANNISA -->
+      <div class="dash-welcome-banner">
+        <div class="welcome-banner-content">
+          <div class="welcome-banner-main">
+            <img src="logo_annisa.png" alt="Logo Resmi SDIT ANNISA" class="welcome-banner-logo">
+            <div>
+              <div class="welcome-small-tag">Portal Resmi Terpadu</div>
+              <h1 class="welcome-banner-title">Selamat Datang di SDIT ANNISA</h1>
+              <p class="welcome-banner-subtitle">Mendidik Generasi Rabbani yang Unggul, Beradab, dan Bertaqwa
+                Berlandaskan Al-Qur'an dan As-Sunnah.</p>
+
+              <div class="welcome-chips-wrapper">
+                <span class="welcome-chip"><i class="fa-solid fa-award"></i> Akreditasi: <strong>A (Sangat
+                    Baik)</strong></span>
+                <span class="welcome-chip"><i class="fa-solid fa-hashtag"></i> NPSN: <strong>20231556</strong></span>
+                <span class="welcome-chip"><i class="fa-solid fa-calendar-days"></i> T.A
+                  <strong>2026/2027</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- TOMBOL HEADER DASHBOARD KHUSUS ADMIN LOGIN -->
+          <div id="adminDashHeaderBtnWrapper">
+            <!-- Dynamic injected when logged in as Admin -->
+          </div>
+        </div>
+      </div>
+
+      <!-- CARDS STATISTIK -->
+      <div class="cards">
+        <div class="card">
+          <div class="card-title">Total Siswa Aktif <i class="fa-solid fa-user-graduate"
+              style="color:var(--primary)"></i></div>
+          <div class="stat-number" id="st-siswa">0</div>
+          <span class="stat-badge">Tahun Ajaran Aktif</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Guru & Tendik <i class="fa-solid fa-user-tie" style="color:var(--emerald)"></i></div>
+          <div class="stat-number" id="st-guru" style="color:var(--emerald)">17</div>
+          <span class="stat-badge" style="background:#ecfdf5;color:#047857">SDM Pengajar</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Barang Inventaris <i class="fa-solid fa-boxes-stacked" style="color:var(--gold)"></i>
+          </div>
+          <div class="stat-number" id="st-inv" style="color:var(--gold)">19</div>
+          <span class="stat-badge" style="background:#fffbeb;color:#b45309">Barang Tercatat</span>
+        </div>
+        <div class="card">
+          <div class="card-title">Total Kelas <i class="fa-solid fa-layer-group" style="color:#7c3aed"></i></div>
+          <div class="stat-number" id="st-kelas" style="color:#7c3aed">0</div>
+          <span class="stat-badge" style="background:#f3e8ff;color:#6b21a8">Ruang Belajar</span>
+        </div>
+      </div>
+
+      <!-- PANEL BERITA TERKINI SEKOLAH (DENGAN SLIDE OTOMATIS & MULTI-UPLOAD FOTO) -->
+      <div class="panel" style="margin-bottom:24px">
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
+          <div>
+            <h3 style="font-size:18px;font-weight:800;color:var(--text-main);"><i class="fa-solid fa-newspaper"
+                style="color:var(--primary)"></i> 📰 Berita & Informasi Terkini Sekolah</h3>
+            <p class="page-subtitle">Kabar terbaru, pengumuman PPDB, dan galeri foto kegiatan santri SDIT ANNISA</p>
+          </div>
+          <div id="adminTambahBeritaBtnWrapper">
+            <!-- Dynamic button "+ Tambah Berita" for Admin -->
+          </div>
+        </div>
+
+        <div id="beritaGrid" class="grid-3">
+          <!-- Dynamic News Cards & Auto-Slide Carousel Injection -->
+        </div>
+      </div>
+
+      <!-- PROFIL RINGKAS & LOG AKTIVITAS -->
+      <div class="grid-2">
+        <div class="panel">
+          <h3>🏫 Profil Ringkas Sekolah</h3>
+          <p class="page-subtitle" style="margin-bottom:14px">Identitas lembaga terdaftar</p>
+          <div id="dashProfilBox" style="font-size:14px;line-height:1.7">
+            <!-- Dynamic profiling text -->
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>📊 Aktivitas & Statistik Sistem</h3>
+          <p class="page-subtitle" style="margin-bottom:14px">Catatan pembaharuan terdata</p>
+          <div id="activityLog" style="margin-top:10px" class="page-subtitle">Belum ada aktivitas.</div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SECTION 1B: DETAIL BERITA & INFORMASI (PORTAL 2 KOLOM SEPERTI CONTOH) -->
+    <section id="beritaDetailSection" class="page-section hide">
+      <!-- Dynamic Injected by openDetailBerita() -->
+    </section>
+
+    <!-- SECTION 2: PROFIL SEKOLAH (MODERN & ELEGAN) -->
+    <section id="profil" class="page-section hide">
+
+      <!-- HERO HEADER PROFIL -->
+      <div class="profil-hero">
+        <div class="profil-hero-content">
+          <div class="profil-hero-text">
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px;">
+              <img src="logo_annisa.png" alt="Logo SDIT ANNISA"
+                style="height:64px;width:64px;object-fit:contain;background:#fff;border-radius:14px;padding:4px;box-shadow:0 6px 16px rgba(0,0,0,0.15);">
+              <div>
+                <h1 id="viewNamaSekolah" style="margin-bottom:0;">SDIT ANNISA</h1>
+                <span style="font-size:13px;color:#60a5fa;font-weight:700;">Sekolah Dasar Islam Terpadu AN NISA</span>
+              </div>
+            </div>
+            <p id="viewTaglineSekolah">Mendidik Generasi Rabbani yang Unggul, Beradab, dan Bertaqwa Berlandaskan
+              Al-Qur'an dan As-Sunnah.</p>
+            <div class="profil-hero-badges">
+              <span class="hero-chip"><i class="fa-solid fa-award"></i> Akreditasi: <strong id="viewAkreditasi">A
+                  (Sangat Baik)</strong></span>
+              <span class="hero-chip"><i class="fa-solid fa-hashtag"></i> NPSN: <strong
+                  id="viewNPSN">20231556</strong></span>
+              <span class="hero-chip"><i class="fa-solid fa-location-dot"></i> <span id="viewKota">Jatiasih Kota Bekasi</span></span>
+            </div>
+          </div>
+
+          <div id="adminEditProfilBtnWrapper">
+            <!-- Dynamic button inject when logged in as Admin -->
+          </div>
+        </div>
+      </div>
+
+      <!-- KATA SAMBUTAN KEPALA SEKOLAH (ELEGANT SECTION) -->
+      <div class="sambutan-card">
+        <div class="sambutan-header-tag">
+          <i class="fa-solid fa-quote-left"></i> Kata Sambutan Kepala Sekolah
+        </div>
+
+        <div class="sambutan-grid">
+          <!-- Headmaster Photo & Title -->
+          <div class="headmaster-profile-wrapper">
+            <div class="headmaster-photo-frame">
+              <img id="viewFotoKepala"
+                src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80"
+                alt="Kepala Sekolah SDIT ANNISA">
+            </div>
+            <div class="headmaster-name" id="viewNamaKepala">Abdul Yakub, S.Ag</div>
+            <div class="headmaster-title" id="viewJabatanKepala">Kepala Sekolah SDIT ANNISA</div>
+          </div>
+
+          <!-- Message Body -->
+          <div>
+            <div class="sambutan-quote-box">
+              <div class="quote-icon"><i class="fa-solid fa-quote-left"></i></div>
+              <div class="sambutan-text" id="viewSambutanText">
+                Assalamu'alaikum Warahmatullahi Wabarakatuh.<br><br>
+                Puji syukur kehadirat Allah SWT yang telah memberikan rahmat dan karunia-Nya. SDIT ANNISA berkomitmen
+                penuh untuk menghadirkan pendidikan Islam terpadu berkelas tinggi yang menyeimbangkan antara ilmu
+                syar'i, pembentukan karakter akhlakul karimah, serta keunggulan akademik dan penguasaan sains
+                teknologi.<br><br>
+                Kami percaya bahwa setiap anak adalah amanah berharga yang memiliki potensi istimewa. Dengan bimbingan
+                para pendidik yang berdedikasi dan ikhlas, mari bersama-sama kita wujudkan generasi Rabbani yang siap
+                memimpin masa depan.
+              </div>
+
+              <div class="sambutan-signature">
+                <span style="font-size:13px;font-weight:700;color:var(--text-muted)">SDIT ANNISA • Islamic Character
+                  Building</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISI & MISI SEKOLAH -->
+      <div class="visi-misi-section">
+        <!-- Visi Card -->
+        <div class="visi-card">
+          <div class="card-badge"><i class="fa-solid fa-bullseye"></i></div>
+          <h3>Visi Sekolah</h3>
+          <p class="visi-text" id="viewVisiText">
+            "Menjadi Sekolah Dasar Islam Terpadu Unggulan yang Membentuk Generasi Rabbani, Berakhlak Mulia, Cerdas,
+            Mandiri, dan Berwawasan Global pada Tahun 2030."
+          </p>
+        </div>
+
+        <!-- Misi Card -->
+        <div class="misi-card">
+          <div class="card-badge"><i class="fa-solid fa-rocket"></i></div>
+          <h3>Misi Sekolah</h3>
+          <ul class="misi-list" id="viewMisiList">
+            <li>Menyelenggarakan pendidikan Islam terpadu yang mengintegrasikan nilai Al-Qur'an dan As-Sunnah dalam
+              setiap pembelajaran.</li>
+            <li>Membimbing pembiasaan ibadah harian, adab sopan santun, dan tahfidz Al-Qur'an juz 30 & 29.</li>
+            <li>Mengembangkan potensi minat bakat siswa secara optimal melalui kurikulum berbasis karakter & STEM.</li>
+            <li>Menjalin kemitraan sinergis yang erat dengan orang tua dan masyarakat dalam pendidikan anak.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- CORE VALUES / PILAR UTAMA -->
+      <div class="panel" style="margin-bottom:28px">
+        <h3 style="margin-bottom:6px">🌟 4 Pilar Utama Pembentukan Karakter</h3>
+        <p class="page-subtitle" style="margin-bottom:20px">Nilai dasar yang ditanamkan kepada seluruh santri SDIT
+          ANNISA</p>
+
+        <div class="grid-4">
+          <div class="core-value-item">
+            <div class="val-icon val-1"><i class="fa-solid fa-kaaba"></i></div>
+            <h4>Iman & Taqwa</h4>
+            <p>Menanamkan akidah lurus dan kecintaan pada ibadah sejak dini</p>
+          </div>
+          <div class="core-value-item">
+            <div class="val-icon val-2"><i class="fa-solid fa-heart"></i></div>
+            <h4>Akhlak Mulia</h4>
+            <p>Membiasakan 5S (Senyum, Sapa, Salam, Sopan, Santun) dan adab Islam</p>
+          </div>
+          <div class="core-value-item">
+            <div class="val-icon val-3"><i class="fa-solid fa-brain"></i></div>
+            <h4>Unggul Akademik</h4>
+            <p>Penguasaan kurikulum nasional & sains dengan berpikir kritis</p>
+          </div>
+          <div class="core-value-item">
+            <div class="val-icon val-4"><i class="fa-solid fa-laptop-code"></i></div>
+            <h4>Teknologi & STEM</h4>
+            <p>Edukasi literasi digital, coding anak, dan bahasa asing</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRID IDENTITAS & KONTAK SEKOLAH -->
+      <div class="panel">
+        <h3 style="margin-bottom:16px">📍 Identitas & Informasi Kontak</h3>
+        <div class="identitas-grid">
+          <div class="identitas-item">
+            <div class="identitas-icon"><i class="fa-solid fa-building-columns"></i></div>
+            <div class="identitas-info">
+              <small>Nama Resmi</small>
+              <strong id="viewNamaLengkap">SDIT ANNISA (Sekolah Dasar Islam Terpadu)</strong>
+            </div>
+          </div>
+          <div class="identitas-item">
+            <div class="identitas-icon"><i class="fa-solid fa-map-location-dot"></i></div>
+            <div class="identitas-info">
+              <small>Alamat Sekolah</small>
+              <strong id="viewAlamat">Jl. Wibawa Mukti II No.5 Jatiasih Kota Bekasi</strong>
+            </div>
+          </div>
+          <div class="identitas-item">
+            <div class="identitas-icon"><i class="fa-solid fa-phone"></i></div>
+            <div class="identitas-info">
+              <small>Telepon / Whatsapp</small>
+              <strong id="viewTelepon">(021) 8243-1220</strong>
+            </div>
+          </div>
+          <div class="identitas-item">
+            <div class="identitas-icon"><i class="fa-solid fa-envelope"></i></div>
+            <div class="identitas-info">
+              <small>Email & Website</small>
+              <strong id="viewEmail">info@sditannisa.sch.id • www.sditannisa.sch.id</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SECTION DYNAMIC TABLES (FOR GURU, SISWA, INVENTARIS, SURAT, DLL) -->
+    <section id="contentSection" class="page-section hide">
+      <div class="page-top">
+        <div>
+          <h1 id="tablePageTitle">Data Master</h1>
+          <p class="page-subtitle" id="tablePageSubtitle">Tampilan data sekolah</p>
+        </div>
+        <div id="tableTopActions">
+          <!-- Dynamic "+ Tambah Data Baru" button inject for Admin -->
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="toolbar">
+          <input type="text" id="searchInput" placeholder="Cari data..." oninput="filterCurrentTable()">
+
+          <div class="toolbar-actions" id="adminToolbarActions">
+            <!-- Dynamic "Unduh Template Excel" & "Unggah Data Excel" buttons inject for Admin ONLY -->
+          </div>
+        </div>
+
+        <div class="table-scroll" id="tableContainer">
+          <!-- Dynamic Table Content -->
+        </div>
+      </div>
+    </section>
+
+
+    <section id="pengaturan" class="page-section hide">
+      <div class="page-top">
+        <div>
+          <h1 id="pengaturanPageTitle"><i class="fa-solid fa-gear"></i> Pengaturan Sistem</h1>
+          <p class="page-subtitle">Konfigurasi Sekolah & Cloud Sync</p>
+        </div>
+      </div>
+
+      <div class="panel" style="max-width: 800px; margin: 0 auto; padding: 24px;">
+        <form onsubmit="savePengaturan(event)">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+              <label>Nama Sekolah</label>
+              <input type="text" id="settingNamaSekolah" class="input-field" required>
+            </div>
+            <div class="form-group">
+              <label>Tahun Ajaran</label>
+              <input type="text" id="settingTahunAjaran" class="input-field" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Kepala Sekolah</label>
+            <input type="text" id="settingKepalaSekolah" class="input-field" required>
+          </div>
+
+          <div class="form-group">
+            <label>Alamat Sekolah</label>
+            <textarea id="settingAlamatSekolah" class="input-field" rows="3"></textarea>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+            <div class="form-group">
+              <label>Logo Sekolah</label>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <img id="previewSettingLogo" src=""
+                  style="width: 60px; height: 60px; object-fit: contain; border: none; box-shadow: none; background: transparent; display: none;">
+                <button type="button" class="btn btn-secondary"
+                  onclick="document.getElementById('settingLogoInput').click()"><i class="fa-solid fa-camera"></i>
+                  Unggah Logo</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Kop Surat</label>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <img id="previewSettingKop" src=""
+                  style="width: 80px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); display: none;">
+                <button type="button" class="btn btn-secondary"
+                  onclick="document.getElementById('settingKopInput').click()"><i class="fa-solid fa-image"></i> Unggah
+                  Kop Surat</button>
+              </div>
+            </div>
+          </div>
+
+          <hr style="margin: 24px 0; border: none; border-top: 1px solid var(--border);">
+          <h3 style="margin-bottom: 16px; color: var(--primary);"><i class="fa-brands fa-google"></i> Konfigurasi Penyimpanan Google Spreadsheet</h3>
+
+          <div class="form-group">
+            <label>Link Google Spreadsheet <small style="color:var(--emerald);font-weight:600;">*Otomatis membuat sheet & terisi sesuai menu</small></label>
+            <input type="text" id="settingSpreadsheetUrl" class="input-field"
+              placeholder="https://docs.google.com/spreadsheets/d/1_UcK3thUuQt7YwIVrKS4Rp1zvEUfdh-Y_UNJ05lphRw/edit" required>
+            <small style="display:block;margin-top:6px;color:var(--text-muted);">
+              Cukup masukkan link spreadsheet di atas. Sistem otomatis mendeteksi ID Spreadsheet dan mengisi data ke sheet: <em>guru, siswa, masuk, keluar, lulusan, kelas, administrasi, inventaris, ruangan, uks, perpustakaan, berita, profil, pengaturan</em>.
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label>ID Folder Google Drive <small style="color:#64748b;font-weight:normal;">*Untuk Foto & Dokumen</small></label>
+            <input type="text" id="settingDriveFolderId" class="input-field"
+              placeholder="1Z9Bil6yyiagMaVrHdclEeR-qyDg9HUfT">
+            <small style="display:block;margin-top:6px;color:var(--text-muted);">
+              ID folder Google Drive tempat penyimpanan foto kegiatan, logo, dan berkas surat.
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label>URL Web App Apps Script (/exec) <small style="color:var(--emerald);font-weight:600;">*Hasil Deploy Web App</small></label>
+            <input type="text" id="settingAppsScriptUrl" class="input-field"
+              placeholder="https://script.google.com/macros/s/.../exec">
+            <small style="display:block;margin-top:6px;color:var(--text-muted);">
+              Tempelkan URL Web App (akhiran <code>/exec</code>) hasil Deploy script spreadsheet Anda agar penyimpanan foto ke Google Drive dan data tersimpan langsung.
+            </small>
+          </div>
+
+          <!-- KARTU PANDUAN OTOMATISASI SPREADSHEET -->
+          <div style="background: rgba(15, 81, 50, 0.06); border: 1px solid rgba(15, 81, 50, 0.2); border-radius: 8px; padding: 16px; margin-top: 16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+              <div>
+                <strong style="color: var(--primary);"><i class="fa-solid fa-file-excel"></i> Otomatisasi Google Spreadsheet</strong>
+                <p style="margin:4px 0 0;font-size:0.85rem;color:var(--text-muted);">
+                  Ingin menghubungkan spreadsheet baru milik sendiri? Cukup salin script otomatis ini ke menu <em>Ekstensi &gt; Apps Script</em> di spreadsheet Anda.
+                </p>
+              </div>
+              <div>
+                <button type="button" class="btn btn-emerald" id="btnSalinScript" onclick="copyScriptCodeDirect(this)" style="font-size:0.88rem;display:flex;align-items:center;gap:8px;">
+                  <code>&lt;/&gt;</code> 📋 <span>Salin Script Spreadsheet</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 24px; text-align: right;">
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Simpan Pengaturan</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <input type="file" id="settingLogoInput" accept="image/*" onchange="handleSettingLogoUpload(event)"
+    style="display:none">
+  <input type="file" id="settingKopInput" accept="image/*" onchange="handleSettingKopUpload(event)"
+    style="display:none">
+  <!-- HIDDEN FILE INPUTS FOR EXCEL, GURU PHOTO, LULUSAN PHOTO, SURAT FILE, FOTO KEPALA SEKOLAH, FOTO FORM MODAL & MULTI-PHOTO BERITA -->
+  <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv, .txt" onchange="handleExcelFileUpload(event)"
+    style="display:none">
+  <input type="file" id="guruPhotoFileInput" accept="image/*" onchange="handleGuruPhotoUploadSubmit(event)"
+    style="display:none">
+  <input type="file" id="lulusanPhotoFileInput" accept="image/*" onchange="handleLulusanPhotoUploadSubmit(event)"
+    style="display:none">
+  <input type="file" id="fotoKepalaFileInput" accept="image/*" onchange="handleFotoKepalaUploadSubmit(event)"
+    style="display:none">
+  <input type="file" id="fotoFormModalFileInput" accept="image/*" onchange="handleFormModalPhotoUploadSubmit(event)"
+    style="display:none">
+  <input type="file" id="suratFileInput" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+    onchange="handleSuratFileUploadSubmit(event)" style="display:none">
+  <input type="file" id="beritaPhotosFileInput" accept="image/*" multiple onchange="handleBeritaPhotosUpload(event)"
+    style="display:none">
+
+  <!-- MODAL 1: AUTHENTICATION ADMIN -->
+  <div class="modal" id="adminAuthModal">
+    <div class="modal-box" style="max-width: 400px;">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-user-shield" style="color:var(--primary)"></i> Otentikasi Admin</h2>
+        <button class="modal-close" onclick="closeModal('adminAuthModal')">&times;</button>
+      </div>
+
+      <form onsubmit="handleAdminLoginSubmit(event)">
+        <div class="form-group">
+          <label>Password Administrator</label>
+          <input type="password" id="adminPasswordInput" placeholder="Masukkan password..." required autofocus>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('adminAuthModal')">Batal</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-key"></i> Masuk</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: EDIT PROFIL SEKOLAH & SAMBUTAN (ADMIN ONLY) -->
+  <div class="modal" id="editProfilModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-pen-to-square" style="color:var(--primary)"></i> Edit Profil & Sambutan Sekolah</h2>
+        <button class="modal-close" onclick="closeModal('editProfilModal')">&times;</button>
+      </div>
+
+      <form onsubmit="saveProfilEdits(event)">
+        <h4 style="color:var(--primary);margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px">1.
+          Identitas Kepala Sekolah & Sambutan</h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nama Kepala Sekolah</label>
+            <input type="text" id="editNamaKepala" required>
+          </div>
+          <div class="form-group">
+            <label>Jabatan / Gelar</label>
+            <input type="text" id="editJabatanKepala" required>
+          </div>
+          <div class="form-group full-width">
+            <label>Unggah Foto Kepala Sekolah</label>
+            <div style="display:flex;gap:14px;align-items:center;">
+              <div
+                style="width:70px;height:85px;border-radius:10px;overflow:hidden;border:1px solid var(--border);flex-shrink:0;background:#f1f5f9;">
+                <img id="editFotoKepalaPreview" src="" style="width:100%;height:100%;object-fit:cover;">
+              </div>
+              <div>
+                <button type="button" class="btn btn-emerald" onclick="triggerFotoKepalaUpload()">
+                  <i class="fa-solid fa-camera"></i> 📤 Unggah File Foto Kepala Sekolah
+                </button>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:6px;">Pilih foto dari Komputer / HP Anda.
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group full-width">
+            <label>Isi Teks Kata Sambutan</label>
+            <textarea id="editSambutanText" rows="5" required></textarea>
+          </div>
+        </div>
+
+        <h4
+          style="color:var(--emerald);margin-top:16px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px">
+          2. Visi & Misi Sekolah</h4>
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Visi Sekolah</label>
+            <textarea id="editVisiText" rows="3" required></textarea>
+          </div>
+          <div class="form-group full-width">
+            <label>Misi Sekolah (Pisahkan setiap poin misi dengan baris baru)</label>
+            <textarea id="editMisiText" rows="4" required></textarea>
+          </div>
+        </div>
+
+        <h4
+          style="color:var(--gold);margin-top:16px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:6px">
+          3. Identitas Umum Sekolah</h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nama Sekolah</label>
+            <input type="text" id="editNamaSekolah" required>
+          </div>
+          <div class="form-group">
+            <label>Akreditasi</label>
+            <input type="text" id="editAkreditasi" required>
+          </div>
+          <div class="form-group">
+            <label>NPSN</label>
+            <input type="text" id="editNPSN" required>
+          </div>
+          <div class="form-group">
+            <label>Telepon</label>
+            <input type="text" id="editTelepon" required>
+          </div>
+          <div class="form-group full-width">
+            <label>Alamat Sekolah</label>
+            <input type="text" id="editAlamat" required>
+          </div>
+          <div class="form-group full-width">
+            <label>Email & Website</label>
+            <input type="text" id="editEmail" required>
+          </div>
+        </div>
+
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+          <button type="button" class="btn btn-danger" onclick="resetProfilDefault()">Reset ke Default</button>
+          <div style="display:flex;gap:10px">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('editProfilModal')">Batal</button>
+            <button type="submit" class="btn btn-emerald"><i class="fa-solid fa-floppy-disk"></i> Simpan
+              Perubahan</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: VERIFIKASI SISWA (MASUKAN TANGGAL LAHIR DD/MM/YYYY) -->
+  <div class="modal" id="verifySiswaModal">
+    <div class="modal-box" style="max-width: 420px;">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-lock" style="color:var(--primary)"></i> Verifikasi Data Siswa</h2>
+        <button class="modal-close" onclick="closeModal('verifySiswaModal')">&times;</button>
+      </div>
+      <p class="page-subtitle" style="margin-bottom:16px">Silakan masukkan <strong>Tanggal Lahir</strong> siswa untuk
+        membuka informasi detail.</p>
+
+      <form onsubmit="handleSiswaVerificationSubmit(event)">
+        <div class="form-group">
+          <label>Target Siswa</label>
+          <input type="text" id="verifyNamaDisplay" readonly
+            style="background:#f8fafc;font-weight:700;color:var(--primary)">
+        </div>
+        <div class="form-group">
+          <label>Tanggal Lahir Siswa (DD/MM/YYYY)</label>
+          <input type="text" id="verifyTglLahirInput" placeholder="Contoh: 30/12/2016" required autofocus>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('verifySiswaModal')">Batal</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-folder-open"></i> Buka Detail</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 4: DETAIL RINGKAS SISWA (DAPODIK MODIFIED) -->
+  <div class="modal" id="detailSiswaModal">
+    <div class="modal-box" style="max-width: 680px;">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-user-graduate" style="color:var(--emerald)"></i> Detail Peserta Didik</h2>
+        <button class="modal-close" onclick="closeModal('detailSiswaModal')">&times;</button>
+      </div>
+
+      <div id="detailSiswaBody">
+        <!-- Dynamic Simplified Detail Content -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: GENERIK FORM FOR DATA MASTER -->
+  <div class="modal" id="formModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 id="formModalTitle">Tambah Data</h2>
+        <button class="modal-close" onclick="closeModal('formModal')">&times;</button>
+      </div>
+      <div id="formModalBody">
+        <!-- Dynamic Form Fields -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 6: SURAT PINDAHAN / DITERIMA SIAP CETAK (PDF) TERINTEGRASI -->
+  <div class="modal" id="suratPrintModal">
+    <div class="modal-box" style="max-width: 840px; padding: 24px;">
+      <div class="modal-header" style="margin-bottom: 14px; padding-bottom: 10px;">
+        <h2><i class="fa-solid fa-file-pdf" style="color:var(--emerald)"></i> Pratinjau Surat Resmi Siap Cetak (PDF)
+        </h2>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="btn btn-emerald" onclick="printSuratDokumen()"><i class="fa-solid fa-print"></i> 🖨️ Cetak /
+            Unduh PDF</button>
+          <button class="modal-close" onclick="closeModal('suratPrintModal')">&times;</button>
+        </div>
+      </div>
+
+      <!-- KERTAS SURAT RESMI -->
+      <div id="suratPrintPaper" class="letter-paper">
+        <!-- Dynamic Integrated Official Letter Content -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 7: DETAIL INVENTARIS PER RUANGAN -->
+  <div class="modal" id="detailInventarisRuangModal">
+    <div class="modal-box" style="max-width: 720px;">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-boxes-stacked" style="color:var(--gold)"></i> Detail Inventaris: <span
+            id="detailRuangTitle">Ruang Kelas 1</span></h2>
+        <button class="modal-close" onclick="closeModal('detailInventarisRuangModal')">&times;</button>
+      </div>
+      <div id="detailInventarisRuangBody">
+        <!-- Dynamic Room Inventory Items Table -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 8: DETAIL BERITA & INFORMASI SEKOLAH (HALAMAN PENUH / FULL READER) -->
+  <div class="modal" id="detailBeritaModal">
+    <div class="modal-box" style="max-width: 860px; padding: 24px; max-height: 92vh; overflow-y: auto;">
+      <div class="modal-header" style="margin-bottom: 14px; padding-bottom: 10px;">
+        <h2><i class="fa-solid fa-newspaper" style="color:var(--primary)"></i> Detail Berita & Informasi Sekolah</h2>
+        <button class="modal-close" onclick="closeModal('detailBeritaModal')">&times;</button>
+      </div>
+      <div id="detailBeritaBody">
+        <!-- Dynamic Full News Article Content -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 9: SCRIPT GOOGLE APPS SCRIPT OTOMATISASI SPREADSHEET -->
+  <div class="modal" id="scriptModal">
+    <div class="modal-box" style="max-width: 820px; max-height: 90vh; display:flex; flex-direction:column;">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-code" style="color:var(--emerald)"></i> Script Otomatis Google Spreadsheet</h2>
+        <button class="modal-close" onclick="closeModal('scriptModal')">&times;</button>
+      </div>
+      <div style="padding: 16px; overflow-y: auto; flex:1;">
+        <div style="background: rgba(15, 81, 50, 0.08); border-left: 4px solid var(--emerald); padding: 12px 16px; border-radius: 4px; margin-bottom: 16px;">
+          <h4 style="margin:0 0 6px 0; color:var(--emerald);">Cara Memasang di Google Spreadsheet (Hanya 1 Menit):</h4>
+          <ol style="margin: 0; padding-left: 20px; font-size: 0.9rem; line-height: 1.6;">
+            <li>Buka Google Spreadsheet baru Anda di Google Drive.</li>
+            <li>Di menu atas, pilih <strong>Ekstensi &gt; Apps Script</strong> (Extensions &gt; Apps Script).</li>
+            <li>Hapus kode bawaan yang ada, lalu klik tombol <strong>"Salin Kode"</strong> di bawah dan tempelkan (Paste).</li>
+            <li>Klik tombol <strong>Deploy &gt; New deployment</strong> (di kanan atas).</li>
+            <li>Pilih Jenis (Gear icon): <strong>Web app</strong>. Atur <em>Who has access</em> ke <strong>Anyone</strong>.</li>
+            <li>Klik <strong>Deploy</strong> &amp; berikan izin. Salin URL Web App yang dihasilkan (akhiran <code>/exec</code>), lalu tempelkan ke kolom <strong>URL Web App Apps Script (/exec)</strong> di menu Pengaturan. Selesai! Foto dan seluruh data langsung terhubung ke Google Drive &amp; Spreadsheet Anda!</li>
+          </ol>
+        </div>
+        <div style="position: relative;">
+          <button type="button" class="btn btn-emerald" onclick="copyScriptCode()" style="position: absolute; top: 12px; right: 12px; z-index: 10;">
+            <i class="fa-solid fa-copy"></i> Salin Kode
+          </button>
+          <textarea id="scriptCodeTextarea" readonly onclick="this.select()" style="width: 100%; height: 380px; background: #0f172a; color: #f8fafc; padding: 18px; border-radius: 8px; font-size: 0.82rem; font-family: monospace; line-height: 1.5; border: 1px solid #334155; resize: vertical; outline: none;">/* ==========================================================================
+   SDIT ANNISA - MASTER GOOGLE APPS SCRIPT (CODE.GS)
+   DATABASE CLOUD ONLINE GOOGLE SHEETS & AUTO-STORE FOTO/FILE GOOGLE DRIVE
+   ========================================================================== */
+
+// ID Folder Google Drive & Spreadsheet Default (Diatur dinamis dari Web)
+var DEFAULT_DRIVE_FOLDER_ID = "1Z9Bil6yyiagMaVrHdclEeR-qyDg9HUfT";
+var DEFAULT_SPREADSHEET_ID = "1_UcK3thUuQt7YwIVrKS4Rp1zvEUfdh-Y_UNJ05lphRw";
+
+/**
+ * 🟢 GET REQUEST: MEMBACA SELURUH DATA DATABASE DARI TABS SPREADSHEET
+ */
+function doGet(e) {
+  try {
+    var ss = null;
+    var targetSpreadsheetId = (e && e.parameter && e.parameter.spreadsheetId) ? e.parameter.spreadsheetId : DEFAULT_SPREADSHEET_ID;
+    if (targetSpreadsheetId) {
+      try {
+        ss = SpreadsheetApp.openById(targetSpreadsheetId);
+      } catch (err) {}
+    }
+    if (!ss) {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+    }
+
+    var db = {};
+    var sheets = ss.getSheets();
+    sheets.forEach(function(sheet) {
+      var name = sheet.getName();
+      var data = sheet.getDataRange().getValues();
+      if (data.length > 1) {
+        var headers = data[0];
+        var rows = [];
+        for (var i = 1; i < data.length; i++) {
+          var rowObj = {};
+          var isEmpty = true;
+          for (var j = 0; j < headers.length; j++) {
+            var val = data[i][j];
+            if (val instanceof Date) {
+              val = Utilities.formatDate(val, Session.getScriptTimeZone() || "Asia/Jakarta", "yyyy-MM-dd");
+            }
+            if (val !== "" && val !== null && val !== undefined) {
+              isEmpty = false;
+            }
+            rowObj[headers[j]] = val !== undefined ? val : "";
+          }
+          if (!isEmpty) {
+            rows.push(rowObj);
+          }
+        }
+        db[name] = rows;
+      } else {
+        db[name] = [];
+      }
+    });
+
+    return ContentService.createTextOutput(JSON.stringify(db))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
+ * 🔴 POST REQUEST: 
+ * 1. UNGGAH & SIMPAN FOTO/DOKUMEN KE GOOGLE DRIVE FOLDER
+ * 2. SYNC & SIMPAN DATA KE SPREADSHEET TABS SERTA LINK GOOGLE DRIVE
+ */
+function doPost(e) {
+  try {
+    var contents = JSON.parse(e.postData.contents);
+
+    // =========================================================================
+    // FITUR 1: SIMPAN FOTO/FILE KE FOLDER GOOGLE DRIVE & HADIRKAN LINK RESMI
+    // =========================================================================
+    if (contents.action === "uploadFile") {
+      var targetFolderId = contents.folderId || DEFAULT_DRIVE_FOLDER_ID;
+      var folder;
+      try {
+        folder = DriveApp.getFolderById(targetFolderId);
+      } catch (fErr) {
+        folder = DriveApp.getRootFolder();
+      }
+
+      var blob = Utilities.newBlob(
+        Utilities.base64Decode(contents.base64Data),
+        contents.mimeType,
+        contents.fileName
+      );
+      
+      var file = folder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      
+      var fileId = file.getId();
+      var driveLink = "https://drive.google.com/file/d/" + fileId + "/view?usp=sharing";
+      var fileUrl = "https://lh3.googleusercontent.com/d/" + fileId;
+
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        fileId: fileId,
+        fileUrl: driveLink,
+        directUrl: fileUrl,
+        driveLink: driveLink,
+        fileName: contents.fileName
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // =========================================================================
+    // FITUR 2: HAPUS FILE DARI GOOGLE DRIVE JIKA DIHAPUS DARI APLIKASI
+    // =========================================================================
+    if (contents.action === "deleteById" && contents.fileId) {
+      try {
+        var fileToTrash = DriveApp.getFileById(contents.fileId);
+        if (fileToTrash) fileToTrash.setTrashed(true);
+      } catch (dErr) {}
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        message: "File berhasil dihapus"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // =========================================================================
+    // FITUR 3: SYNC DATABASE LENGKAP & LINK FOTO KE GOOGLE SPREADSHEET TABS
+    // =========================================================================
+    var ss = null;
+    if (contents.spreadsheetId) {
+      try {
+        ss = SpreadsheetApp.openById(contents.spreadsheetId);
+      } catch (sErr) {}
+    }
+    if (!ss) {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+    }
+
+    for (var key in contents) {
+      if (contents.hasOwnProperty(key) && Array.isArray(contents[key])) {
+        if (key === "spreadsheetId" || key === "spreadsheetUrl" || key === "driveFolderId") continue;
+
+        var sheet = ss.getSheetByName(key);
+        if (!sheet) {
+          sheet = ss.insertSheet(key);
+        }
+        sheet.clear();
+
+        var rows = contents[key];
+        if (rows.length > 0) {
+          var headers = Object.keys(rows[0]);
+          var dataToStore = [headers];
+
+          rows.forEach(function(row) {
+            var rowData = [];
+            headers.forEach(function(header) {
+              var val = row[header] !== undefined && row[header] !== null ? row[header] : "";
+              if (Array.isArray(val)) {
+                val = val.join(", ");
+              }
+              rowData.push(val);
+            });
+            dataToStore.push(rowData);
+          });
+
+          sheet.getRange(1, 1, dataToStore.length, headers.length).setValues(dataToStore);
+
+          sheet.getRange(1, 1, 1, headers.length)
+            .setFontWeight("bold")
+            .setBackground("#0f5132")
+            .setFontColor("#ffffff");
+          sheet.setFrozenRows(1);
+        }
+      }
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "success",
+      message: "Seluruh foto, file dokumen, dan database berhasil tersimpan di Cloud!"
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Script (Loaded at end of body for instant interactive execution on GitHub Pages & Localhost) -->
+  <script src="app.js?v=2.5"></script>
+</body>
+
+</html>
