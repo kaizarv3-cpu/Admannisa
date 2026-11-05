@@ -22,7 +22,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="style.css?v=2.5">
+  <link rel="stylesheet" href="style.css?v=2.7">
 </head>
 
 <body>
@@ -466,7 +466,7 @@
           <div class="form-group">
             <label>Link Google Spreadsheet <small style="color:var(--emerald);font-weight:600;">*Otomatis membuat sheet & terisi sesuai menu</small></label>
             <input type="text" id="settingSpreadsheetUrl" class="input-field"
-              placeholder="https://docs.google.com/spreadsheets/d/1_UcK3thUuQt7YwIVrKS4Rp1zvEUfdh-Y_UNJ05lphRw/edit" required>
+              placeholder="https://docs.google.com/spreadsheets/d/1VgZGuN63asgp_Wcqg5p9uLNQrcCH0ZlZKTz1v5XLdNE/edit" required>
             <small style="display:block;margin-top:6px;color:var(--text-muted);">
               Cukup masukkan link spreadsheet di atas. Sistem otomatis mendeteksi ID Spreadsheet dan mengisi data ke sheet: <em>guru, siswa, masuk, keluar, lulusan, kelas, administrasi, inventaris, ruangan, uks, perpustakaan, berita, profil, pengaturan</em>.
             </small>
@@ -782,12 +782,12 @@
           </button>
           <textarea id="scriptCodeTextarea" readonly onclick="this.select()" style="width: 100%; height: 380px; background: #0f172a; color: #f8fafc; padding: 18px; border-radius: 8px; font-size: 0.82rem; font-family: monospace; line-height: 1.5; border: 1px solid #334155; resize: vertical; outline: none;">/* ==========================================================================
    SDIT ANNISA - MASTER GOOGLE APPS SCRIPT (CODE.GS)
-   DATABASE CLOUD ONLINE GOOGLE SHEETS & AUTO-STORE FOTO/FILE GOOGLE DRIVE
+   DATABASE CLOUD ONLINE GOOGLE SHEETS &amp; AUTO-STORE FOTO/FILE GOOGLE DRIVE
    ========================================================================== */
 
-// ID Folder Google Drive & Spreadsheet Default (Diatur dinamis dari Web)
-var DEFAULT_DRIVE_FOLDER_ID = "1Z9Bil6yyiagMaVrHdclEeR-qyDg9HUfT";
-var DEFAULT_SPREADSHEET_ID = "1_UcK3thUuQt7YwIVrKS4Rp1zvEUfdh-Y_UNJ05lphRw";
+// ID Folder Google Drive Default (Bisa diganti atau diatur dinamis dari Web)
+var DEFAULT_DRIVE_FOLDER_ID = &quot;1Z9Bil6yyiagMaVrHdclEeR-qyDg9HUfT&quot;;
+var DEFAULT_SPREADSHEET_ID = &quot;1VgZGuN63asgp_Wcqg5p9uLNQrcCH0ZlZKTz1v5XLdNE&quot;;
 
 /**
  * 🟢 GET REQUEST: MEMBACA SELURUH DATA DATABASE DARI TABS SPREADSHEET
@@ -795,7 +795,7 @@ var DEFAULT_SPREADSHEET_ID = "1_UcK3thUuQt7YwIVrKS4Rp1zvEUfdh-Y_UNJ05lphRw";
 function doGet(e) {
   try {
     var ss = null;
-    var targetSpreadsheetId = (e && e.parameter && e.parameter.spreadsheetId) ? e.parameter.spreadsheetId : DEFAULT_SPREADSHEET_ID;
+    var targetSpreadsheetId = (e &amp;&amp; e.parameter &amp;&amp; e.parameter.spreadsheetId) ? e.parameter.spreadsheetId : DEFAULT_SPREADSHEET_ID;
     if (targetSpreadsheetId) {
       try {
         ss = SpreadsheetApp.openById(targetSpreadsheetId);
@@ -810,21 +810,21 @@ function doGet(e) {
     sheets.forEach(function(sheet) {
       var name = sheet.getName();
       var data = sheet.getDataRange().getValues();
-      if (data.length > 1) {
+      if (data.length &gt; 1) {
         var headers = data[0];
         var rows = [];
-        for (var i = 1; i < data.length; i++) {
+        for (var i = 1; i &lt; data.length; i++) {
           var rowObj = {};
           var isEmpty = true;
-          for (var j = 0; j < headers.length; j++) {
+          for (var j = 0; j &lt; headers.length; j++) {
             var val = data[i][j];
             if (val instanceof Date) {
-              val = Utilities.formatDate(val, Session.getScriptTimeZone() || "Asia/Jakarta", "yyyy-MM-dd");
+              val = Utilities.formatDate(val, Session.getScriptTimeZone() || &quot;Asia/Jakarta&quot;, &quot;yyyy-MM-dd&quot;);
             }
-            if (val !== "" && val !== null && val !== undefined) {
+            if (val !== &quot;&quot; &amp;&amp; val !== null &amp;&amp; val !== undefined) {
               isEmpty = false;
             }
-            rowObj[headers[j]] = val !== undefined ? val : "";
+            rowObj[headers[j]] = val !== undefined ? val : &quot;&quot;;
           }
           if (!isEmpty) {
             rows.push(rowObj);
@@ -840,24 +840,25 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ status: "error", message: err.toString() }))
+    return ContentService.createTextOutput(JSON.stringify({ status: &quot;error&quot;, message: err.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
 
 /**
  * 🔴 POST REQUEST: 
- * 1. UNGGAH & SIMPAN FOTO/DOKUMEN KE GOOGLE DRIVE FOLDER
- * 2. SYNC & SIMPAN DATA KE SPREADSHEET TABS SERTA LINK GOOGLE DRIVE
+ * 1. UNGGAH &amp; SIMPAN FOTO/DOKUMEN KE GOOGLE DRIVE FOLDER
+ * 2. SYNC &amp; SIMPAN DATA KE SPREADSHEET TABS SERTA LINK GOOGLE DRIVE
  */
 function doPost(e) {
   try {
     var contents = JSON.parse(e.postData.contents);
 
     // =========================================================================
-    // FITUR 1: SIMPAN FOTO/FILE KE FOLDER GOOGLE DRIVE & HADIRKAN LINK RESMI
+    // FITUR 1: SIMPAN FOTO/FILE KE FOLDER GOOGLE DRIVE &amp; HADIRKAN LINK RESMI
     // =========================================================================
-    if (contents.action === "uploadFile") {
+    if (contents.action === &quot;uploadFile&quot;) {
+      // Menggunakan folder ID yang dikirim dari Web App, jika kosong gunakan default
       var targetFolderId = contents.folderId || DEFAULT_DRIVE_FOLDER_ID;
       var folder;
       try {
@@ -872,15 +873,20 @@ function doPost(e) {
         contents.fileName
       );
       
+      // Simpan file fisik secara otomatis ke dalam folder Google Drive Anda
       var file = folder.createFile(blob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       
       var fileId = file.getId();
-      var driveLink = "https://drive.google.com/file/d/" + fileId + "/view?usp=sharing";
-      var fileUrl = "https://lh3.googleusercontent.com/d/" + fileId;
+      
+      // 🔗 LINK RESMI GOOGLE DRIVE UNTUK SEL DATABASE SPREADSHEET
+      var driveLink = &quot;https://drive.google.com/file/d/&quot; + fileId + &quot;/view?usp=sharing&quot;;
+      
+      // 🖼️ LINK PRATINJAU GAMBAR UNTUK APLIKASI WEB
+      var fileUrl = &quot;https://lh3.googleusercontent.com/d/&quot; + fileId;
 
       return ContentService.createTextOutput(JSON.stringify({
-        status: "success",
+        status: &quot;success&quot;,
         fileId: fileId,
         fileUrl: driveLink,
         directUrl: fileUrl,
@@ -892,24 +898,71 @@ function doPost(e) {
     // =========================================================================
     // FITUR 2: HAPUS FILE DARI GOOGLE DRIVE JIKA DIHAPUS DARI APLIKASI
     // =========================================================================
-    if (contents.action === "deleteById" && contents.fileId) {
+    if (contents.action === &quot;deleteById&quot; &amp;&amp; contents.fileId) {
       try {
         var fileToTrash = DriveApp.getFileById(contents.fileId);
         if (fileToTrash) fileToTrash.setTrashed(true);
       } catch (dErr) {}
       return ContentService.createTextOutput(JSON.stringify({
-        status: "success",
-        message: "File berhasil dihapus"
+        status: &quot;success&quot;,
+        message: &quot;File berhasil dihapus&quot;
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
+        // =========================================================================
+    // FITUR 3: SIMPAN PENGATURAN (SPREADSHEET, GDRIVE, APPS SCRIPT) KE SHEET PENGATURAN
     // =========================================================================
-    // FITUR 3: SYNC DATABASE LENGKAP & LINK FOTO KE GOOGLE SPREADSHEET TABS
+    if (contents.action === &quot;savePengaturan&quot; &amp;&amp; contents.pengaturan) {
+      var targetSpreadsheetId = contents.spreadsheetId || DEFAULT_SPREADSHEET_ID;
+      var ss = null;
+      if (targetSpreadsheetId) {
+        try { ss = SpreadsheetApp.openById(targetSpreadsheetId); } catch(sErr){}
+      }
+      if (!ss) {
+        ss = SpreadsheetApp.getActiveSpreadsheet();
+      }
+
+      var sheet = ss.getSheetByName(&quot;pengaturan&quot;);
+      if (!sheet) {
+        sheet = ss.insertSheet(&quot;pengaturan&quot;, 0);
+      }
+      sheet.clear();
+
+      var rows = Array.isArray(contents.pengaturan) ? contents.pengaturan : [contents.pengaturan];
+      if (rows.length &gt; 0) {
+        var headers = Object.keys(rows[0]);
+        var dataToStore = [headers];
+
+        rows.forEach(function(row) {
+          var rowData = [];
+          headers.forEach(function(header) {
+            var val = row[header] !== undefined &amp;&amp; row[header] !== null ? row[header] : &quot;&quot;;
+            rowData.push(val);
+          });
+          dataToStore.push(rowData);
+        });
+
+        sheet.getRange(1, 1, dataToStore.length, headers.length).setValues(dataToStore);
+        sheet.getRange(1, 1, 1, headers.length)
+          .setFontWeight(&quot;bold&quot;)
+          .setBackground(&quot;#0f5132&quot;)
+          .setFontColor(&quot;#ffffff&quot;);
+        sheet.setFrozenRows(1);
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        status: &quot;success&quot;,
+        message: &quot;Pengaturan sistem berhasil disimpan di sheet pengaturan Google Spreadsheet!&quot;
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    // =========================================================================
+    // FITUR 4: SYNC DATABASE LENGKAP &amp; LINK FOTO KE GOOGLE SPREADSHEET TABS
     // =========================================================================
     var ss = null;
-    if (contents.spreadsheetId) {
+    var targetSpreadsheetId = contents.spreadsheetId || DEFAULT_SPREADSHEET_ID;
+    if (targetSpreadsheetId) {
       try {
-        ss = SpreadsheetApp.openById(contents.spreadsheetId);
+        ss = SpreadsheetApp.openById(targetSpreadsheetId);
       } catch (sErr) {}
     }
     if (!ss) {
@@ -917,8 +970,8 @@ function doPost(e) {
     }
 
     for (var key in contents) {
-      if (contents.hasOwnProperty(key) && Array.isArray(contents[key])) {
-        if (key === "spreadsheetId" || key === "spreadsheetUrl" || key === "driveFolderId") continue;
+      if (contents.hasOwnProperty(key) &amp;&amp; Array.isArray(contents[key])) {
+        if (key === &quot;spreadsheetId&quot; || key === &quot;spreadsheetUrl&quot; || key === &quot;driveFolderId&quot;) continue;
 
         var sheet = ss.getSheetByName(key);
         if (!sheet) {
@@ -927,16 +980,16 @@ function doPost(e) {
         sheet.clear();
 
         var rows = contents[key];
-        if (rows.length > 0) {
+        if (rows.length &gt; 0) {
           var headers = Object.keys(rows[0]);
           var dataToStore = [headers];
 
           rows.forEach(function(row) {
             var rowData = [];
             headers.forEach(function(header) {
-              var val = row[header] !== undefined && row[header] !== null ? row[header] : "";
+              var val = row[header] !== undefined &amp;&amp; row[header] !== null ? row[header] : &quot;&quot;;
               if (Array.isArray(val)) {
-                val = val.join(", ");
+                val = val.join(&quot;, &quot;);
               }
               rowData.push(val);
             });
@@ -945,34 +998,37 @@ function doPost(e) {
 
           sheet.getRange(1, 1, dataToStore.length, headers.length).setValues(dataToStore);
 
+          // Format Header Baris 1: Tebal &amp; Warna Hijau Emerald
           sheet.getRange(1, 1, 1, headers.length)
-            .setFontWeight("bold")
-            .setBackground("#0f5132")
-            .setFontColor("#ffffff");
+            .setFontWeight(&quot;bold&quot;)
+            .setBackground(&quot;#0f5132&quot;)
+            .setFontColor(&quot;#ffffff&quot;);
           sheet.setFrozenRows(1);
         }
       }
     }
 
     return ContentService.createTextOutput(JSON.stringify({
-      status: "success",
-      message: "Seluruh foto, file dokumen, dan database berhasil tersimpan di Cloud!"
+      status: &quot;success&quot;,
+      message: &quot;Seluruh foto, file dokumen, dan database berhasil tersimpan di Cloud!&quot;
     })).setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
-      status: "error",
+      status: &quot;error&quot;,
       message: err.toString()
     })).setMimeType(ContentService.MimeType.JSON);
   }
-}</textarea>
+}
+
+</textarea>
         </div>
       </div>
     </div>
   </div>
 
   <!-- App Script (Loaded at end of body for instant interactive execution on GitHub Pages & Localhost) -->
-  <script src="app.js?v=2.5"></script>
+  <script src="app.js?v=2.7"></script>
 </body>
 
 </html>

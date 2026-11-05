@@ -1,9 +1,9 @@
-const DEFAULT_SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1_UcK3thUuQt7YwIVrKS4Rp1zvEUfdh-Y_UNJ05lphRw/edit';
-const DEFAULT_SPREADSHEET_ID = '1_UcK3thUuQt7YwIVrKS4Rp1zvEUfdh-Y_UNJ05lphRw';
-const DEFAULT_DRIVE_FOLDER_ID = '1Z9Bil6yyiagMaVrHdclEeR-qyDg9HUfT';
+const DEFAULT_SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1VgZGuN63asgp_Wcqg5p9uLNQrcCH0ZlZKTz1v5XLdNE/edit';
+const DEFAULT_SPREADSHEET_ID = '1VgZGuN63asgp_Wcqg5p9uLNQrcCH0ZlZKTz1v5XLdNE';
+const DEFAULT_DRIVE_FOLDER_ID = '1Z9Bil6yyiagMaVrHdcIEeR-qyDg9HUfT';
 const OLD_APPS_SCRIPT_URL_PATTERN = 'AKfycbyN05PIWa01Ey0jLnkNRyIdg4i3HJOCxKfMPhQ8fbpdYm6wt8kKYlx1KtvTnsgdCxol';
 const LEGACY_APPS_SCRIPT_URL = 'AKfycbx1p4pJlOepzP4zK6tcJ91sKJYJrq0-fBsTl3bl_0h9UmIlpy-R3wdsyvJE6C0caj8';
-const GOOGLE_SHEETS_WEB_APP_URL = '';
+const GOOGLE_SHEETS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx9mh_D6HaICM4eKF5RFNry81mgP_KudnRuxniDkJpP-Vg6XYekw0eV0ZtXaD91-mZyMw/exec';
 
 function extractSpreadsheetId(urlOrId) {
   if (!urlOrId) return '';
@@ -491,25 +491,32 @@ function syncFromGoogleSheetsCloud(showToast = true, callback = null) {
         }
       }
 
-      // 4. Parse pengaturan
+      // 4. Parse pengaturan langsung dari Cloud Spreadsheet (Single Source of Truth)
       if (cloudDb.pengaturan) {
         const rawPeng = Array.isArray(cloudDb.pengaturan) ? cloudDb.pengaturan[0] : cloudDb.pengaturan;
         if (rawPeng && typeof rawPeng === 'object' && Object.keys(rawPeng).length > 0) {
-          // Ambil pengaturan lokal yang sedang aktif saat ini (JANGAN biarkan cloud menimpa link spreadsheet & drive lokal)
-          const currentSpreadUrl = (db.pengaturan && db.pengaturan.spreadsheetUrl);
-          const currentSpreadId = (db.pengaturan && db.pengaturan.spreadsheetId);
-          const currentDriveId = (db.pengaturan && db.pengaturan.driveFolderId);
-          const currentAppsUrl = (db.pengaturan && db.pengaturan.appsScriptUrl);
+          const cloudSpreadUrl = (rawPeng.spreadsheetUrl || '').trim();
+          const cloudAppsUrl = (rawPeng.appsScriptUrl || '').trim();
+          const cloudDriveId = (rawPeng.driveFolderId || '').trim();
 
           db.pengaturan = {
             ...DEFAULT_PENGATURAN,
+            ...db.pengaturan,
             ...rawPeng,
-            spreadsheetUrl: currentSpreadUrl || rawPeng.spreadsheetUrl || DEFAULT_SPREADSHEET_URL,
-            spreadsheetId: currentSpreadId || extractSpreadsheetId(currentSpreadUrl || rawPeng.spreadsheetUrl),
-            driveFolderId: (currentDriveId !== undefined && currentDriveId !== null && currentDriveId !== '') ? currentDriveId : (rawPeng.driveFolderId || ''),
-            appsScriptUrl: currentAppsUrl || rawPeng.appsScriptUrl || GOOGLE_SHEETS_WEB_APP_URL
+            namaSekolah: rawPeng.namaSekolah || db.pengaturan.namaSekolah || DEFAULT_PENGATURAN.namaSekolah,
+            alamatSekolah: (rawPeng.alamatSekolah !== undefined && rawPeng.alamatSekolah !== null && rawPeng.alamatSekolah !== '') ? rawPeng.alamatSekolah : (db.pengaturan.alamatSekolah || ''),
+            kepalaSekolah: rawPeng.kepalaSekolah || db.pengaturan.kepalaSekolah || DEFAULT_PENGATURAN.kepalaSekolah,
+            tahunAjaran: rawPeng.tahunAjaran || db.pengaturan.tahunAjaran || DEFAULT_PENGATURAN.tahunAjaran,
+            logo: rawPeng.logo || db.pengaturan.logo || '',
+            kopSurat: rawPeng.kopSurat || db.pengaturan.kopSurat || '',
+            spreadsheetUrl: cloudSpreadUrl || DEFAULT_SPREADSHEET_URL,
+            spreadsheetId: extractSpreadsheetId(cloudSpreadUrl) || DEFAULT_SPREADSHEET_ID,
+            driveFolderId: cloudDriveId || DEFAULT_DRIVE_FOLDER_ID,
+            appsScriptUrl: cloudAppsUrl || GOOGLE_SHEETS_WEB_APP_URL
           };
           hasNewCloudData = true;
+          populatePengaturanForm();
+          applySchoolBranding();
         }
       }
 
@@ -582,15 +589,15 @@ const ADMIN_PASSWORD_CORRECT = 'hdt123';
 // INITIAL DEFAULT STATE (NPSN: 20231556, NAMA KEPALA SEKOLAH: Abdul Yakub, S.Ag)
 const DEFAULT_PENGATURAN = {
   namaSekolah: 'SDIT ANNISA',
-  alamatSekolah: 'Jl. Wibawa Mukti II No.5 Jatiasih Kota Bekasi',
+  alamatSekolah: 'Kec. Jatiasih',
   kepalaSekolah: 'Abdul Yakub, S.Ag',
   tahunAjaran: '2026/2027',
   logo: '',
   kopSurat: '',
-  spreadsheetUrl: DEFAULT_SPREADSHEET_URL,
-  spreadsheetId: DEFAULT_SPREADSHEET_ID,
-  driveFolderId: DEFAULT_DRIVE_FOLDER_ID,
-  appsScriptUrl: ''
+  spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/1VgZGuN63asgp_Wcqg5p9uLNQrcCH0ZlZKTz1v5XLdNE/edit',
+  spreadsheetId: '1VgZGuN63asgp_Wcqg5p9uLNQrcCH0ZlZKTz1v5XLdNE',
+  driveFolderId: '1Z9Bil6yyiagMaVrHdcIEeR-qyDg9HUfT',
+  appsScriptUrl: 'https://script.google.com/macros/s/AKfycbx9mh_D6HaICM4eKF5RFNry81mgP_KudnRuxniDkJpP-Vg6XYekw0eV0ZtXaD91-mZyMw/exec'
 };
 
 const DEFAULT_PROFIL = {
@@ -1110,10 +1117,13 @@ function loadDatabase() {
       loadedDb.pengaturan.appsScriptUrl = '';
     }
     // Utamakan spreadsheetUrl dari pengaturan lokal
-    if (!loadedDb.pengaturan.spreadsheetUrl || loadedDb.pengaturan.spreadsheetUrl.includes('AKfycb')) {
+    if (!loadedDb.pengaturan.spreadsheetUrl || loadedDb.pengaturan.spreadsheetUrl.includes('AKfycb') || loadedDb.pengaturan.spreadsheetUrl.includes('1_UcK3thUuQt7YwIVrKS4Rp1zvEUfdh-Y_UNJ05lphRw')) {
       loadedDb.pengaturan.spreadsheetUrl = DEFAULT_SPREADSHEET_URL;
     }
     loadedDb.pengaturan.spreadsheetId = extractSpreadsheetId(loadedDb.pengaturan.spreadsheetUrl) || DEFAULT_SPREADSHEET_ID;
+    if (!loadedDb.pengaturan.appsScriptUrl || loadedDb.pengaturan.appsScriptUrl.includes(OLD_APPS_SCRIPT_URL_PATTERN) || loadedDb.pengaturan.appsScriptUrl.includes(LEGACY_APPS_SCRIPT_URL)) {
+      loadedDb.pengaturan.appsScriptUrl = GOOGLE_SHEETS_WEB_APP_URL;
+    }
 
     // Utamakan folder ID dari pengaturan lokal
     if (!loadedDb.pengaturan.driveFolderId || loadedDb.pengaturan.driveFolderId === '1U3WB4loqnuxck2x1We5fxH9EeJLuVkrr' || loadedDb.pengaturan.driveFolderId.includes('HUT')) {
@@ -4432,8 +4442,54 @@ function doPost(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
+        // =========================================================================
+    // FITUR 3: SIMPAN PENGATURAN (SPREADSHEET, GDRIVE, APPS SCRIPT) KE SHEET PENGATURAN
     // =========================================================================
-    // FITUR 3: SYNC DATABASE LENGKAP KE TABS GOOGLE SPREADSHEET
+    if (contents.action === "savePengaturan" && contents.pengaturan) {
+      var targetSpreadsheetId = contents.spreadsheetId || DEFAULT_SPREADSHEET_ID;
+      var ss = null;
+      if (targetSpreadsheetId) {
+        try { ss = SpreadsheetApp.openById(targetSpreadsheetId); } catch(sErr){}
+      }
+      if (!ss) {
+        ss = SpreadsheetApp.getActiveSpreadsheet();
+      }
+
+      var sheet = ss.getSheetByName("pengaturan");
+      if (!sheet) {
+        sheet = ss.insertSheet("pengaturan", 0);
+      }
+      sheet.clear();
+
+      var rows = Array.isArray(contents.pengaturan) ? contents.pengaturan : [contents.pengaturan];
+      if (rows.length > 0) {
+        var headers = Object.keys(rows[0]);
+        var dataToStore = [headers];
+
+        rows.forEach(function(row) {
+          var rowData = [];
+          headers.forEach(function(header) {
+            var val = row[header] !== undefined && row[header] !== null ? row[header] : "";
+            rowData.push(val);
+          });
+          dataToStore.push(rowData);
+        });
+
+        sheet.getRange(1, 1, dataToStore.length, headers.length).setValues(dataToStore);
+        sheet.getRange(1, 1, 1, headers.length)
+          .setFontWeight("bold")
+          .setBackground("#0f5132")
+          .setFontColor("#ffffff");
+        sheet.setFrozenRows(1);
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        message: "Pengaturan sistem berhasil disimpan di sheet pengaturan Google Spreadsheet!"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    // =========================================================================
+    // FITUR 4: SYNC DATABASE LENGKAP KE TABS GOOGLE SPREADSHEET
     // =========================================================================
     var ss = null;
     var targetSpreadsheetId = contents.spreadsheetId || DEFAULT_SPREADSHEET_ID;
@@ -4603,36 +4659,72 @@ function handleSettingKopUpload(event) {
 
 function savePengaturan(e) {
   e.preventDefault();
-  db.pengaturan.namaSekolah = document.getElementById('settingNamaSekolah').value;
-  db.pengaturan.tahunAjaran = document.getElementById('settingTahunAjaran').value;
-  db.pengaturan.kepalaSekolah = document.getElementById('settingKepalaSekolah').value;
-  db.pengaturan.alamatSekolah = document.getElementById('settingAlamatSekolah').value;
+  db.pengaturan.namaSekolah = document.getElementById('settingNamaSekolah').value.trim();
+  db.pengaturan.tahunAjaran = document.getElementById('settingTahunAjaran').value.trim();
+  db.pengaturan.kepalaSekolah = document.getElementById('settingKepalaSekolah').value.trim();
+  db.pengaturan.alamatSekolah = document.getElementById('settingAlamatSekolah').value.trim();
 
   const rawSpreadUrl = (document.getElementById('settingSpreadsheetUrl') ? document.getElementById('settingSpreadsheetUrl').value.trim() : '');
   const rawDriveId = (document.getElementById('settingDriveFolderId') ? document.getElementById('settingDriveFolderId').value.trim() : '');
   const rawAppsScriptUrl = (document.getElementById('settingAppsScriptUrl') ? document.getElementById('settingAppsScriptUrl').value.trim() : '');
 
-  // Jadikan link dan ID yang dimasukkan sebagai active database!
   db.pengaturan.spreadsheetUrl = rawSpreadUrl || DEFAULT_SPREADSHEET_URL;
   db.pengaturan.spreadsheetId = extractSpreadsheetId(db.pengaturan.spreadsheetUrl) || DEFAULT_SPREADSHEET_ID;
   db.pengaturan.driveFolderId = rawDriveId || DEFAULT_DRIVE_FOLDER_ID;
-  db.pengaturan.appsScriptUrl = rawAppsScriptUrl;
+  db.pengaturan.appsScriptUrl = rawAppsScriptUrl || GOOGLE_SHEETS_WEB_APP_URL;
 
-  saveDatabase();
+  saveDatabaseLocalOnly();
   applySchoolBranding();
 
-  // Sinkronkan data ke cloud (jika Apps Script /exec diisi) dan muat database
-  syncToGoogleSheetsCloud();
-  syncFromGoogleSheetsCloud(true, (success) => {
-    const msg = '✅ Database Berhasil Disimpan & Diaktifkan!\n\n' +
+  const endpoint = db.pengaturan.appsScriptUrl || GOOGLE_SHEETS_WEB_APP_URL;
+  showSystemToast('⏳ Menyimpan pengaturan ke Google Spreadsheet (sheet pengaturan)...', 'info', 4000);
+
+  const savePayload = {
+    action: 'savePengaturan',
+    spreadsheetId: db.pengaturan.spreadsheetId,
+    spreadsheetUrl: db.pengaturan.spreadsheetUrl,
+    driveFolderId: db.pengaturan.driveFolderId,
+    pengaturan: [{
+      namaSekolah: db.pengaturan.namaSekolah,
+      alamatSekolah: db.pengaturan.alamatSekolah,
+      kepalaSekolah: db.pengaturan.kepalaSekolah,
+      tahunAjaran: db.pengaturan.tahunAjaran,
+      logo: db.pengaturan.logo || '',
+      kopSurat: db.pengaturan.kopSurat || '',
+      spreadsheetUrl: db.pengaturan.spreadsheetUrl,
+      appsScriptUrl: db.pengaturan.appsScriptUrl,
+      driveFolderId: db.pengaturan.driveFolderId
+    }]
+  };
+
+  if (!endpoint || endpoint.trim() === '') {
+    showSystemToast('✅ Pengaturan disimpan secara lokal. Masukkan URL Apps Script (/exec) untuk sinkronisasi cloud.', 'warning', 6000);
+    return;
+  }
+
+  fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(savePayload),
+    redirect: 'follow'
+  })
+  .then(res => res.json().catch(() => ({ status: 'success' })))
+  .then(result => {
+    // Sinkronkan seluruh data sheet lainnya ke cloud agar tetap selaras
+    syncToGoogleSheetsCloud();
+    showSystemToast('✅ Pengaturan berhasil disimpan langsung di Google Spreadsheet (sheet pengaturan)!', 'success', 5000);
+    const msg = '✅ Pengaturan Berhasil Disimpan ke Spreadsheet Cloud!\n\n' +
       '• Link Database: ' + db.pengaturan.spreadsheetUrl + '\n' +
       '• ID Spreadsheet: ' + db.pengaturan.spreadsheetId + '\n' +
       '• ID Folder Drive: ' + db.pengaturan.driveFolderId + '\n' +
-      '• URL Apps Script (/exec): ' + (db.pengaturan.appsScriptUrl || '(Belum diisi)') + '\n\n' +
-      (success 
-        ? 'Seluruh data berhasil disinkronkan langsung dari spreadsheet ini!' 
-        : 'Perubahan konfigurasi telah disimpan secara permanen di sistem.');
+      '• URL Apps Script (/exec): ' + db.pengaturan.appsScriptUrl + '\n\n' +
+      'Pengaturan telah tersimpan di sheet "pengaturan" di Google Sheets. ' +
+      'Ketika web dibuka di browser lain atau handphone, konfigurasi ini otomatis termuat langsung dari spreadsheet!';
     alert(msg);
+  })
+  .catch(err => {
+    console.warn('Gagal menyimpan pengaturan ke cloud:', err);
+    showSystemToast('⚠️ Gagal terhubung ke Google Spreadsheet: ' + err.message + '. Data tersimpan di memori lokal.', 'warning', 7000);
   });
 }
 

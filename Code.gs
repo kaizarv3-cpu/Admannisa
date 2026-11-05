@@ -5,7 +5,7 @@
 
 // ID Folder Google Drive Default (Bisa diganti atau diatur dinamis dari Web)
 var DEFAULT_DRIVE_FOLDER_ID = "1Z9Bil6yyiagMaVrHdclEeR-qyDg9HUfT";
-var DEFAULT_SPREADSHEET_ID = "1_UcK3thUuQt7YwIVrKS4Rp1zvEUfdh-Y_UNJ05lphRw";
+var DEFAULT_SPREADSHEET_ID = "1VgZGuN63asgp_Wcqg5p9uLNQrcCH0ZlZKTz1v5XLdNE";
 
 /**
  * 🟢 GET REQUEST: MEMBACA SELURUH DATA DATABASE DARI TABS SPREADSHEET
@@ -127,8 +127,54 @@ function doPost(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
+        // =========================================================================
+    // FITUR 3: SIMPAN PENGATURAN (SPREADSHEET, GDRIVE, APPS SCRIPT) KE SHEET PENGATURAN
     // =========================================================================
-    // FITUR 3: SYNC DATABASE LENGKAP & LINK FOTO KE GOOGLE SPREADSHEET TABS
+    if (contents.action === "savePengaturan" && contents.pengaturan) {
+      var targetSpreadsheetId = contents.spreadsheetId || DEFAULT_SPREADSHEET_ID;
+      var ss = null;
+      if (targetSpreadsheetId) {
+        try { ss = SpreadsheetApp.openById(targetSpreadsheetId); } catch(sErr){}
+      }
+      if (!ss) {
+        ss = SpreadsheetApp.getActiveSpreadsheet();
+      }
+
+      var sheet = ss.getSheetByName("pengaturan");
+      if (!sheet) {
+        sheet = ss.insertSheet("pengaturan", 0);
+      }
+      sheet.clear();
+
+      var rows = Array.isArray(contents.pengaturan) ? contents.pengaturan : [contents.pengaturan];
+      if (rows.length > 0) {
+        var headers = Object.keys(rows[0]);
+        var dataToStore = [headers];
+
+        rows.forEach(function(row) {
+          var rowData = [];
+          headers.forEach(function(header) {
+            var val = row[header] !== undefined && row[header] !== null ? row[header] : "";
+            rowData.push(val);
+          });
+          dataToStore.push(rowData);
+        });
+
+        sheet.getRange(1, 1, dataToStore.length, headers.length).setValues(dataToStore);
+        sheet.getRange(1, 1, 1, headers.length)
+          .setFontWeight("bold")
+          .setBackground("#0f5132")
+          .setFontColor("#ffffff");
+        sheet.setFrozenRows(1);
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        message: "Pengaturan sistem berhasil disimpan di sheet pengaturan Google Spreadsheet!"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    // =========================================================================
+    // FITUR 4: SYNC DATABASE LENGKAP & LINK FOTO KE GOOGLE SPREADSHEET TABS
     // =========================================================================
     var ss = null;
     var targetSpreadsheetId = contents.spreadsheetId || DEFAULT_SPREADSHEET_ID;
