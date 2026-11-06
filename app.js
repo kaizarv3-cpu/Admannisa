@@ -359,6 +359,10 @@ function syncFromGoogleSheetsCloud(showToast = true, callback = null) {
             const hasVal = Object.values(row).some(v => v !== null && String(v).trim() !== '');
             if (!hasVal) return false;
             if (isRecordDeleted(k, row)) return false;
+            // Pastikan tidak ada link unsplash yang masuk ke sistem
+            if (row.Foto && typeof row.Foto === 'string' && row.Foto.includes('unsplash.com')) row.Foto = '';
+            if (row.foto && typeof row.foto === 'string' && row.foto.includes('unsplash.com')) row.foto = '';
+            if (row.fotos && typeof row.fotos === 'string' && row.fotos.includes('unsplash.com')) row.fotos = '';
             return true;
           });
           
@@ -1186,7 +1190,20 @@ function loadDatabase() {
     if (!loadedDb.profil.alamat || loadedDb.profil.alamat.toLowerCase().includes('jakarta') || loadedDb.profil.alamat.includes('Jl. Wibawa Mukti')) {
       loadedDb.profil.alamat = 'Jl. Wibawa Mukti II No.5 Jatiasih Kota Bekasi';
     }
-    if (loadedDb.profil.fotoKepala && loadedDb.profil.fotoKepala.includes('unsplash.com')) {
+      // Bersihkan foto unsplash asing dari seluruh data lokal
+  ['lulusan', 'guru', 'berita'].forEach(sec => {
+    if (Array.isArray(loadedDb[sec])) {
+      loadedDb[sec].forEach(item => {
+        if (item.Foto && item.Foto.includes('unsplash.com')) item.Foto = '';
+        if (item.foto && item.foto.includes('unsplash.com')) item.foto = '';
+        if (Array.isArray(item.fotos)) {
+          item.fotos = item.fotos.filter(f => !f.includes('unsplash.com'));
+        }
+      });
+    }
+  });
+
+  if (loadedDb.profil.fotoKepala && loadedDb.profil.fotoKepala.includes('unsplash.com')) {
       loadedDb.profil.fotoKepala = '';
     }
   } else {
@@ -1568,7 +1585,7 @@ function renderBeritaGrid() {
   }
 
   container.innerHTML = bList.map((item, bIdx) => {
-    let photoArr = item.fotos && Array.isArray(item.fotos) && item.fotos.length > 0 ? item.fotos : (item.foto ? [item.foto] : ['https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=600&q=80']);
+    let photoArr = item.fotos && Array.isArray(item.fotos) && item.fotos.length > 0 ? item.fotos : (item.foto ? [item.foto] : ['logo_annisa.png']);
     const isMultiPhoto = photoArr.length > 1;
 
     return `
@@ -1683,7 +1700,7 @@ function openDetailBerita(idx) {
   const item = bList[idx];
   currentDetailBeritaPhotos = (item.fotos && Array.isArray(item.fotos) && item.fotos.length > 0)
     ? item.fotos
-    : (item.foto ? [item.foto] : ['https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80']);
+    : (item.foto ? [item.foto] : ['logo_annisa.png']);
 
   const p = db.profil || DEFAULT_PROFIL;
   const peng = db.pengaturan || DEFAULT_PENGATURAN;
@@ -1822,7 +1839,7 @@ function openDetailBerita(idx) {
             ${bList.map((other, oIdx) => {
               const otherPhotos = (other.fotos && Array.isArray(other.fotos) && other.fotos.length > 0)
                 ? other.fotos
-                : (other.foto ? [other.foto] : ['https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=600&q=80']);
+                : (other.foto ? [other.foto] : ['logo_annisa.png']);
               const thumbSrc = otherPhotos[0];
               const isCurrent = oIdx === idx;
               const otherTitle = (other.judul || '')
@@ -2218,7 +2235,7 @@ function renderProfilView() {
   
   const imgKepala = document.getElementById('viewFotoKepala');
   if (imgKepala) {
-    imgKepala.src = getDirectImageSrc(p.fotoKepala || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80');
+    imgKepala.src = getDirectImageSrc(p.fotoKepala || 'logo_annisa.png');
   }
 
   document.getElementById('viewSambutanText').innerText = p.sambutanText;
@@ -2276,7 +2293,7 @@ function openEditProfilModal() {
   }
 
   const p = db.profil || DEFAULT_PROFIL;
-  tempUploadedFotoKepala = p.fotoKepala || 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80';
+  tempUploadedFotoKepala = p.fotoKepala || 'logo_annisa.png';
 
   document.getElementById('editNamaKepala').value = p.namaKepala || 'Abdul Yakub, S.Ag';
   document.getElementById('editJabatanKepala').value = p.jabatanKepala || 'Kepala Sekolah SDIT ANNISA';
@@ -3280,7 +3297,7 @@ function renderTable(id) {
         ${items.map((row) => {
           const realIdx = db[id].indexOf(row);
           const kelasLabel = row.Jabatan || row.Kelas || 'Guru Kelas 1';
-          const defaultAvatar = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80';
+          const defaultAvatar = 'logo_annisa.png';
           const photoUrl = getDirectImageSrc(row.Foto || defaultAvatar);
 
           return `
@@ -3324,7 +3341,7 @@ function renderTable(id) {
         ${items.map((row) => {
           const realIdx = db[id].indexOf(row);
           const angkatanLabel = row.Tahun || row['Tahun Pelajaran'] || row.Angkatan || 'Angkatan 2025/2026';
-          const defaultAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';
+          const defaultAvatar = 'logo_annisa.png';
           const photoUrl = getDirectImageSrc(row.Foto || defaultAvatar);
 
           return `
@@ -3807,7 +3824,7 @@ function openFormModal(idx = -1) {
       <div class="form-grid">
         ${fields.filter(f => f !== 'File Surat' && f !== 'Jumlah Inventaris' && f !== 'Detail Inventaris').map(f => {
           if (f === 'Foto') {
-            const defaultAvatar = currentSectionId === 'guru' ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&q=80' : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';
+            const defaultAvatar = currentSectionId === 'guru' ? 'logo_annisa.png' : 'logo_annisa.png';
             const previewUrl = tempUploadedSingleFormPhoto || defaultAvatar;
 
             return `
